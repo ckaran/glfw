@@ -63,6 +63,9 @@ static DWORD getWindowExStyle(const _GLFWwindow* window)
     if (window->decorated && !window->monitor)
         style |= WS_EX_WINDOWEDGE;
 
+    if (window->transparent)
+        style |= WS_EX_LAYERED;
+
     return style;
 }
 

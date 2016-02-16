@@ -105,9 +105,27 @@ typedef BOOL (WINAPI * WGLSHARELISTS_T)(HGLRC,HGLRC);
 //
 typedef struct _GLFWcontextWGL
 {
-    HDC       dc;
-    HGLRC     handle;
-    int       interval;
+     HDC       dc;              // Private GDI device context
+     HGLRC     context;         // Permanent rendering context
+     HDC       dcTransparent;   // Device context for drawing transparent windows
+     int       interval;
+
+     // WGL extensions (context specific)
+     PFNWGLSWAPINTERVALEXTPROC           SwapIntervalEXT;
+     PFNWGLGETPIXELFORMATATTRIBIVARBPROC GetPixelFormatAttribivARB;
+     PFNWGLGETEXTENSIONSSTRINGEXTPROC    GetExtensionsStringEXT;
+     PFNWGLGETEXTENSIONSSTRINGARBPROC    GetExtensionsStringARB;
+     PFNWGLCREATECONTEXTATTRIBSARBPROC   CreateContextAttribsARB;
+     GLboolean                           EXT_swap_control;
+     GLboolean                           ARB_multisample;
+     GLboolean                           ARB_framebuffer_sRGB;
+     GLboolean                           EXT_framebuffer_sRGB;
+     GLboolean                           ARB_pixel_format;
+     GLboolean                           ARB_create_context;
+     GLboolean                           ARB_create_context_profile;
+     GLboolean                           EXT_create_context_es2_profile;
+     GLboolean                           ARB_create_context_robustness;
+     GLboolean                           ARB_context_flush_control;
 
 } _GLFWcontextWGL;
 

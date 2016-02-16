@@ -353,6 +353,17 @@ GLFWbool _glfwCreateContextWGL(_GLFWwindow* window,
         return GLFW_FALSE;
     }
 
+    if (window->transparent)
+    {
+        window->wgl.dcTransparent = CreateCompatibleDC(NULL);
+
+        if (!window->wgl.dcTransparent)
+        {
+            _glfwInputError(GLFW_PLATFORM_ERROR, "WGL: Failed to retrieve DC for window");
+            return GL_FALSE;
+        }
+    }
+
     if (!choosePixelFormat(window, fbconfig, &pixelFormat))
         return GLFW_FALSE;
 
@@ -606,6 +617,42 @@ void _glfwPlatformMakeContextCurrent(_GLFWwindow* window)
 
 void _glfwPlatformSwapBuffers(_GLFWwindow* window)
 {
+    if (window->transparent)
+    {
+        HBITMAP hBitmap    = 0;
+        BITMAPINFO bmpInfo = { 0 };
+        BYTE* pixels       = 0;
+        HGDIOBJ hPrevObj   = 0;
+        POINT ptSrc        = {0, 0};
+        int window_w, window_h;
+        BLENDFUNCTION blendFunc = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
+
+        _glfwPlatformGetFramebufferSize(window, &window_w, &window_h);
+        SIZE client = { window_w, window_h };
+
+        bmpInfo.bmiHeader.biBitCount = 32;
+        bmpInfo.bmiHeader.biWidth    = window_w;
+        bmpInfo.bmiHeader.biHeight   = window_h;
+        bmpInfo.bmiHeader.biPlanes   = 1;
+        bmpInfo.bmiHeader.biSize     = sizeof(BITMAPINFOHEADER);
+        bmpInfo.bmiHeader.biCompression = BI_RGB;
+        hBitmap = CreateDIBSection(window->wgl.dcTransparent, &bmpInfo, DIB_RGB_COLORS, (void**)&pixels, NULL, 0);
+        if (!hBitmap || !pixels)
+        {
+            _glfwInputError(GLFW_PLATFORM_ERROR, "WGL: Could not create bitmap for transparent");
+            return;
+        }
+
+        glReadPixels( 0, 0, window_w, window_h, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+
+        hPrevObj = SelectObject(window->wgl.dcTransparent, hBitmap);
+        UpdateLayeredWindow(window->win32.handle, NULL, NULL, &client,
+            window->wgl.dcTransparent, &ptSrc, 0, &blendFunc, ULW_ALPHA);
+
+        SelectObject(window->wgl.dcTransparent, hPrevObj);
+        DeleteObject(hBitmap);
+    }
+
     // HACK: Use DwmFlush when desktop composition is enabled
     if (isCompositionEnabled() && !window->monitor)
     {
@@ -688,4 +735,3 @@ GLFWAPI HGLRC glfwGetWGLContext(GLFWwindow* handle)
 
     return window->context.wgl.handle;
 }
-
